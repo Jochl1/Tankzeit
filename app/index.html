@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tanken oder Warten?</title>
+  <meta name="description" content="Empfiehlt, ob du jetzt tanken oder warten solltest – mit Begründung aus Preisprofil, 12-Uhr-Regel und Ölpreis.">
+  <script>
+    // Theme vor dem ersten Rendern setzen (kein Aufblitzen). Manuelle Wahl hat Vorrang,
+    // sonst Systemeinstellung, ohne Vorgabe: dunkel.
+    (function () {
+      var c = null;
+      try { c = localStorage.getItem('tz-theme'); } catch (e) {}
+      var light = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      var t = c === 'light' || c === 'dark' ? c : (light ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', t);
+      document.documentElement.style.colorScheme = t;
+    })();
+  </script>
+  <meta name="theme-color" content="#101214" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f7f8" media="(prefers-color-scheme: light)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tankzeit">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand"><span class="brand-mark" aria-hidden="true"></span>Tanken oder Warten?</h1>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="btn-theme" type="button" aria-label="Hell/Dunkel umschalten">
+        <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2Z"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-settings" type="button" aria-label="Einstellungen" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- Onboarding: API-Key -->
+    <section id="view-onboarding" class="view" hidden>
+      <div class="card intro">
+        <h2>Willkommen</h2>
+        <p>Diese App sagt dir, ob du <strong>jetzt tanken</strong> oder <strong>besser warten</strong> solltest – und warum.</p>
+        <p>Die Live-Preise kommen von <a href="https://www.tankerkoenig.de" target="_blank" rel="noopener">Tankerkönig</a>. Dafür brauchst du einen eigenen, kostenlosen API-Key.</p>
+        <details class="why">
+          <summary>Warum ein eigener Key?</summary>
+          <p>Die Tankerkönig-API erlaubt nur etwa eine Abfrage pro Minute und Key. Ein gemeinsamer Key für alle würde sofort gesperrt. Mit deinem eigenen Key fragst du nur für dich selbst ab.</p>
+          <p><strong>Dein Key verlässt dein Gerät nicht:</strong> Er wird nur lokal im Browser gespeichert und nur direkt an die Tankerkönig-API gesendet – es gibt keinen Server dazwischen.</p>
+        </details>
+        <ol class="steps">
+          <li>Key beantragen unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a> (Kategorie z. B. „private Website“). Die Freigabe wird von Hand geprüft und kommt per E-Mail.</li>
+          <li>Key hier einfügen:</li>
+        </ol>
+        <form id="form-key" class="stack" novalidate>
+          <label for="input-key" class="label">Tankerkönig-API-Key</label>
+          <input id="input-key" class="input mono" autocomplete="off" autocapitalize="off" spellcheck="false"
+                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" inputmode="text">
+          <p class="error" id="key-error" role="alert" hidden></p>
+          <button class="btn btn-primary" type="submit">Speichern und loslegen</button>
+          <button class="btn btn-ghost" type="button" id="btn-demo">Erst mal die Demo ansehen</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Standort -->
+    <section id="view-location" class="view" hidden>
+      <div class="card">
+        <h2>Wo möchtest du tanken?</h2>
+        <p class="muted">Dein Standort wird nur verwendet, um Tankstellen in der Nähe zu finden.</p>
+        <button class="btn btn-primary" id="btn-gps" type="button">Aktuellen Standort verwenden</button>
+        <div class="divider"><span>oder</span></div>
+        <form id="form-plz" class="stack" novalidate>
+          <label for="input-plz" class="label">PLZ oder Ort</label>
+          <input id="input-plz" class="input" autocomplete="postal-code" placeholder="z. B. 04178 oder Leipzig">
+          <button class="btn" type="submit">Suchen</button>
+        </form>
+        <p class="error" id="loc-error" role="alert" hidden></p>
+        <button class="btn btn-ghost" id="btn-loc-cancel" type="button" hidden>Abbrechen</button>
+      </div>
+    </section>
+
+    <!-- Hauptansicht -->
+    <section id="view-main" class="view" hidden>
+      <div class="locbar">
+        <button class="chip" id="btn-location" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+          <span id="loc-label">Standort</span>
+        </button>
+        <span class="chip chip-static" id="fuel-label">E10 · 5 km</span>
+      </div>
+
+      <div id="notices"></div>
+
+      <article id="banner" class="banner" aria-live="polite">
+        <p class="banner-kicker" id="banner-kicker">Empfehlung</p>
+        <h2 class="banner-title" id="banner-title">Lade Preise …</h2>
+        <p class="banner-sub" id="banner-sub"></p>
+      </article>
+
+      <div class="card summary" id="summary" hidden>
+        <dl class="facts">
+          <div><dt id="fact-price-label">Günstigster Preis jetzt</dt><dd id="fact-price">–</dd></div>
+          <div><dt>Ersparnis</dt><dd id="fact-saving">–</dd></div>
+        </dl>
+        <a class="station-link" id="fact-station" href="#" target="_blank" rel="noopener"></a>
+        <p class="meta" id="fact-meta"></p>
+        <button class="btn btn-small" id="btn-refresh" type="button">Preise aktualisieren</button>
+      </div>
+
+      <h2 class="section-title" id="why">Warum?</h2>
+
+      <section class="card" id="sec-day">
+        <h3>Preis heute vs. typisches Tagesprofil</h3>
+        <div class="chart-wrap" id="chart-day"></div>
+        <p class="note" id="day-text"></p>
+      </section>
+
+      <section class="card" id="sec-stations">
+        <h3>Günstigste Tankstellen in der Nähe</h3>
+        <ul class="stations" id="station-list"></ul>
+        <p class="note">Tippen öffnet die Navigation. Preise ohne Gewähr.</p>
+      </section>
+
+      <section class="card" id="sec-dow">
+        <h3>Wochentagseffekt</h3>
+        <div class="chart-wrap" id="chart-dow"></div>
+        <p class="note" id="dow-text"></p>
+      </section>
+
+      <section class="card" id="sec-oil">
+        <h3>Ölpreis und Spritpreis</h3>
+        <div class="chart-wrap" id="chart-oil"></div>
+        <p class="note" id="oil-text"></p>
+        <div class="chart-wrap" id="chart-rf"></div>
+        <p class="note" id="rf-text"></p>
+      </section>
+
+      <section class="card" id="sec-backtest">
+        <h3>Wie verlässlich ist das?</h3>
+        <div id="backtest"></div>
+        <p class="note">Alle Angaben sind Schätzungen auf Basis typischer Preisverläufe. Einzelne Tankstellen können jederzeit abweichen.</p>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Preise: <a href="https://www.tankerkoenig.de" target="_blank" rel="noopener">Tankerkönig</a> / MTS-K, Lizenz <a href="https://creativecommons.org/licenses/by/4.0/deed.de" target="_blank" rel="noopener">CC BY 4.0</a>.
+      Tagesverlauf: <a href="https://www.adac.de/verkehr/tanken-kraftstoff-antrieb/tipps-zum-tanken/spritpreise-tagesverlauf/" target="_blank" rel="noopener">ADAC</a>.
+      Ölpreis-Analyse: EU Weekly Oil Bulletin, FRED, EZB.
+      Ortssuche: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende.</p>
+    <p id="footer-profiles" hidden></p>
+    <p>Keine Gewähr. Der API-Key bleibt auf deinem Gerät.</p>
+  </footer>
+
+  <!-- Einstellungen -->
+  <dialog id="dlg-settings" class="sheet" aria-labelledby="settings-title">
+    <form method="dialog" id="form-settings" class="stack">
+      <div class="sheet-head">
+        <h2 id="settings-title">Einstellungen</h2>
+        <button class="icon-btn" value="cancel" aria-label="Schließen" formnovalidate>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <fieldset class="field">
+        <legend class="label">Kraftstoff</legend>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="fuel" value="e5"><span>Super E5</span></label>
+          <label><input type="radio" name="fuel" value="e10"><span>Super E10</span></label>
+          <label><input type="radio" name="fuel" value="diesel"><span>Diesel</span></label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label class="label" for="set-radius">Suchradius: <output id="out-radius">5 km</output></label>
+        <input type="range" id="set-radius" name="radius" min="1" max="25" step="1">
+      </div>
+
+      <div class="field">
+        <label class="label" for="set-tank">Tankgröße (Liter)</label>
+        <input type="number" id="set-tank" class="input" name="tank" min="5" max="200" step="1" inputmode="numeric">
+      </div>
+
+      <fieldset class="field">
+        <legend class="label">Erscheinungsbild</legend>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="theme" value="auto"><span>Automatisch</span></label>
+          <label><input type="radio" name="theme" value="light"><span>Hell</span></label>
+          <label><input type="radio" name="theme" value="dark"><span>Dunkel</span></label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label class="label" for="set-key">Tankerkönig-API-Key</label>
+        <input id="set-key" class="input mono" name="apiKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="nicht gesetzt (Demo-Modus)">
+        <p class="hint">Wird nur auf diesem Gerät gespeichert und nur an die Tankerkönig-API gesendet. <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">Key beantragen</a></p>
+        <p class="error" id="set-key-error" role="alert" hidden></p>
+      </div>
+
+      <div class="field">
+        <p class="label">Gelernte Daten</p>
+        <p class="hint" id="learn-info">–</p>
+      </div>
+
+      <button class="btn btn-primary" value="save" id="btn-save">Speichern</button>
+      <button class="btn btn-danger" type="button" id="btn-delete-key">Key und alle Daten löschen</button>
+    </form>
+  </dialog>
+</body>
+</html>

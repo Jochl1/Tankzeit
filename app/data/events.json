@@ -1,0 +1,4 @@
+{
+  "_hinweis": "Bekannte Termine mit erwartbarer Preiswirkung (z. B. Steuer- oder CO2-Preisänderung). Nur eintragen, wenn Datum und Größenordnung offiziell feststehen. delta_ct = erwartete Änderung an der Säule in ct/l. Beispiel: {\"from\": \"2027-01-01T00:00:00+01:00\", \"fuels\": [\"e5\", \"e10\", \"diesel\"], \"delta_ct\": 3.0, \"title\": \"CO2-Preis steigt\"}",
+  "events": []
+}
